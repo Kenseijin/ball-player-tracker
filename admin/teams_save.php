@@ -1,59 +1,48 @@
 <?php
-require_once '../classes/Database.php';
-require_once '../classes/Team.php'; // your Team class with add/update methods
-
-session_start();
+require_once '../classes/database.php';
+require_once '../classes/team.php';
 
 $db = Database::getInstance()->getConnection();
 $team = new Team($db);
 
-$id = $_POST['id'] ?? null;
-$name = $_POST['name'] ?? '';
-$coach = $_POST['coach'] ?? '';
-$city = $_POST['city'] ?? '';
+// Handle delete via GET (optional if needed here)
+if (isset($_GET['delete'])) {
+    $team->delete($_GET['delete']);
+    header("Location: teams_admin.php");
+    exit;
+}
 
-$uploadDir = 'uploads/teams/'; // make sure this folder exists and is writable
+// Form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id     = $_POST['id'] ?? null;
+    $name   = $_POST['name'] ?? '';
+    $coach  = $_POST['coach'] ?? '';
+    $city   = $_POST['city'] ?? '';
+    $logo   = null;
 
-// Handle logo upload
-$logoPath = null;
-if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-    $fileTmpPath = $_FILES['logo']['tmp_name'];
-    $fileName = basename($_FILES['logo']['name']);
-    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    $newFileName = uniqid('team_', true) . '.' . $fileExt;
-
-    if (in_array($fileExt, ['jpg', 'jpeg', 'png', 'gif'])) {
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+    // Handle file upload
+    if (!empty($_FILES['logo']['name'])) {
+        $targetDir = '../uploads/teams/';
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0777, true);
         }
-        $destPath = $uploadDir . $newFileName;
-        if (move_uploaded_file($fileTmpPath, $destPath)) {
-            $logoPath = $destPath;
-        } else {
-            $_SESSION['error'] = 'Error moving uploaded file.';
-            header('Location: teams_admin.php');
-            exit;
+
+        $filename = time() . '_' . basename($_FILES['logo']['name']);
+        $targetFile = $targetDir . $filename;
+
+        if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetFile)) {
+            $logo = $filename;
         }
-    } else {
-        $_SESSION['error'] = 'Invalid file type for logo.';
-        header('Location: teams_admin.php');
-        exit;
     }
-}
 
-// If updating, keep existing logo if no new upload
-if ($id && !$logoPath) {
-    $existingTeam = $team->getById($id);
-    $logoPath = $existingTeam['logo'] ?? null;
-}
+    // Perform add or update
+    if ($id) {
+        $team->update($id, $name, $coach, $city, $logo);
+    } else {
+        $team->add($name, $coach, $city, $logo);
+    }
 
-if ($id) {
-    $success = $team->update($id, $name, $coach, $city, $logoPath);
-    $_SESSION['message'] = $success ? 'Team updated successfully.' : 'Failed to update team.';
-} else {
-    $success = $team->add($name, $coach, $city, $logoPath);
-    $_SESSION['message'] = $success ? 'Team added successfully.' : 'Failed to add team.';
+    header("Location: teams_admin.php");
+    exit;
 }
-
-header('Location: teams_admin.php');
-exit;
+?>

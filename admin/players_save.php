@@ -1,6 +1,6 @@
 <?php
 require_once '../classes/Database.php';
-require_once '../classes/Player.php'; // your Player class with add/update methods
+require_once '../classes/player.php';
 
 session_start();
 
@@ -12,11 +12,12 @@ $name = $_POST['name'] ?? '';
 $age = $_POST['age'] ?? null;
 $position = $_POST['position'] ?? '';
 $jersey_number = $_POST['jersey_number'] ?? null;
+$team_id = $_POST['team_id'] ?? null;
 
-$uploadDir = 'uploads/players/'; // make sure this folder exists and is writable
-
-// Handle photo upload
+$uploadDir = '../uploads/players/';
 $photoPath = null;
+
+// Handle upload
 if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
     $fileTmpPath = $_FILES['photo']['tmp_name'];
     $fileName = basename($_FILES['photo']['name']);
@@ -29,34 +30,34 @@ if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         }
         $destPath = $uploadDir . $newFileName;
         if (move_uploaded_file($fileTmpPath, $destPath)) {
-            $photoPath = $destPath;
+            $photoPath = $newFileName;
         } else {
             $_SESSION['error'] = 'Error moving uploaded file.';
             header('Location: players_admin.php');
             exit;
         }
     } else {
-        $_SESSION['error'] = 'Invalid file type for photo.';
+        $_SESSION['error'] = 'Invalid file type.';
         header('Location: players_admin.php');
         exit;
     }
 }
 
-// If updating, get the existing photo to keep if no new upload
+// If no new photo, keep old one
 if ($id && !$photoPath) {
     $existingPlayer = $player->getById($id);
     $photoPath = $existingPlayer['photo'] ?? null;
 }
 
+// Save
 if ($id) {
-    // Update existing player
-    $success = $player->update($id, $name, $age, $position, $jersey_number, $photoPath);
+    $success = $player->update($id, $name, $age, $position, $jersey_number, $photoPath, $team_id);
     $_SESSION['message'] = $success ? 'Player updated successfully.' : 'Failed to update player.';
 } else {
-    // Add new player
-    $success = $player->add($name, $age, $position, $jersey_number, $photoPath);
+    $success = $player->add($name, $age, $position, $jersey_number, $photoPath, $team_id);
     $_SESSION['message'] = $success ? 'Player added successfully.' : 'Failed to add player.';
 }
 
 header('Location: players_admin.php');
 exit;
+?>

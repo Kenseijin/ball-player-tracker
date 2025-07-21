@@ -1,4 +1,5 @@
 <?php
+require_once 'database.php';
 class Player {
     private $db;
 
@@ -36,16 +37,12 @@ class Player {
         return $stmt->execute([$id]);
     }
 
-    public function getByTeam($team_id) {
-    $stmt = $this->db->prepare(
-        "SELECT players.*, teams.name AS team_name 
-         FROM players 
-         LEFT JOIN teams ON players.team_id = teams.id 
-         WHERE players.team_id = ? 
-         ORDER BY players.name ASC"
-    );
-    $stmt->execute([$team_id]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByTeam($team_id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM players WHERE team_id = ?");
+        $stmt->execute([$team_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
 }
 ?>
